@@ -7,7 +7,7 @@ print("If this fails, you may need to set your KAGGLE_USERNAME and KAGGLE_KEY en
 
 try:
     # Download the model
-    path = kagglehub.model_download("google/gemma/tensorFlowLite/gemma-2b-it-gpu-int4")
+    path = kagglehub.model_download("google/gemma/tfLite/gemma-2b-it-gpu-int4")
     print("Downloaded successfully to:", path)
     
     # Check if the file is there
