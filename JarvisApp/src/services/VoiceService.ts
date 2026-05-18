@@ -1,11 +1,20 @@
-import { initWhisper } from 'react-native-whisper';
-// import { OrtContext, Session } from 'onnxruntime-react-native'; // Placeholder for ONNX TTS
+// Lazy-load whisper to prevent crash if native module isn't available
+let initWhisper: any = null;
+try {
+  initWhisper = require('react-native-whisper').initWhisper;
+} catch (e) {
+  console.warn('react-native-whisper not available, STT disabled');
+}
 
 export class VoiceService {
   private static whisperContext: any = null;
 
   static async init(modelPath: string) {
     if (this.whisperContext) return;
+    if (!initWhisper) {
+      console.warn('Whisper not available');
+      return;
+    }
     try {
       this.whisperContext = await initWhisper(modelPath);
       console.log('Whisper initialized');

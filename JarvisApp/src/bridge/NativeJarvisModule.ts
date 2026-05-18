@@ -1,9 +1,10 @@
-import type {TurboModule} from 'react-native';
-import {TurboModuleRegistry} from 'react-native';
+import { NativeModules } from 'react-native';
 
-export interface Spec extends TurboModule {
+interface JarvisModuleSpec {
   generateResponse(prompt: string): Promise<string>;
   initializeModel(modelPath: string): Promise<boolean>;
 }
 
-export default TurboModuleRegistry.getEnforced<Spec>('JarvisModule');
+const JarvisModule: JarvisModuleSpec | null = NativeModules.JarvisModule || null;
+
+export default JarvisModule;

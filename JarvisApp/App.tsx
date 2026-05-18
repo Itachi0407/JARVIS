@@ -21,7 +21,7 @@ const App = () => {
 
   useEffect(() => {
     // Initialize J.A.R.V.I.S.
-    JarvisService.initialize('/sdcard/Download/phi-3-mini-4bit.tflite');
+    JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
   }, []);
 
   const handlePress = async () => {
