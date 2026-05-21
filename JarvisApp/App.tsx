@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -10,31 +10,39 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
-import {JarvisOrb} from './src/components/JarvisOrb';
-import {JarvisService} from './src/services/JarvisService';
-import {VoiceService} from './src/services/VoiceService';
+import { JarvisOrb } from './src/components/JarvisOrb';
+import { JarvisService } from './src/services/JarvisService';
+import { VoiceService } from './src/services/VoiceService';
 
 const App = () => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('Awaiting your command, sir.');
-  const [history, setHistory] = useState<{role: string; text: string}[]>([]);
+  const [history, setHistory] = useState<{ role: string; text: string }[]>([]);
 
   useEffect(() => {
     const init = async () => {
+      console.log('Starting J.A.R.V.I.S. initialization...');
       if (Platform.OS === 'android') {
-        await PermissionsAndroid.requestMultiple([
+        const granted = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
         ]);
+        console.log('Permissions status:', granted);
       }
 
-      // Initialize J.A.R.V.I.S.
-      await JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
-      // Initialize Whisper STT
-      await VoiceService.init('/sdcard/Download/whisper-base.bin');
+      try {
+        // Initialize J.A.R.V.I.S.
+        await JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
+        // Initialize Whisper STT
+        await VoiceService.init('/sdcard/Download/whisper-base.bin');
+        console.log('Systems online, sir.');
+      } catch (error) {
+        console.error('Initialization failed:', error);
+        setResponse('Error: Failed to load local engines. Check model paths.');
+      }
     };
     init();
   }, []);
@@ -46,7 +54,7 @@ const App = () => {
     } else {
       setIsListening(true);
       setTranscript('Listening...');
-      
+
       try {
         const text = await VoiceService.startListening();
         setIsListening(false);
@@ -66,15 +74,15 @@ const App = () => {
   const processCommand = async (command: string) => {
     setIsProcessing(true);
     setTranscript(command);
-    
+
     try {
       const result = await JarvisService.ask(command);
       setResponse(result.text);
-      setHistory(prev => [...prev, {role: 'user', text: command}, {role: 'jarvis', text: result.text}]);
-      
+      setHistory(prev => [...prev, { role: 'user', text: command }, { role: 'jarvis', text: result.text }]);
+
       // Speak the response
       await VoiceService.speak(result.text);
-      
+
       if (result.action) {
         console.log('Executing action:', result.action);
         // Handle device control here
@@ -103,9 +111,9 @@ const App = () => {
         <Text style={styles.response}>{response}</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.historyContainer}
-        contentContainerStyle={{paddingBottom: 20}}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
         {history.map((item, index) => (
           <View key={index} style={item.role === 'user' ? styles.userMessage : styles.jarvisMessage}>
@@ -116,8 +124,8 @@ const App = () => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={[styles.micButton, isListening && styles.micButtonActive]} 
+        <TouchableOpacity
+          style={[styles.micButton, isListening && styles.micButtonActive]}
           onPress={handlePress}
         >
           <Text style={styles.micIcon}>{isListening ? 'STOP' : 'LISTEN'}</Text>
@@ -219,7 +227,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#00f2ff',
-    shadowOffset: {width: 0, height: 0},
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 5,

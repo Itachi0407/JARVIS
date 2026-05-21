@@ -19,6 +19,12 @@ class JarvisModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
     @ReactMethod
     fun initializeModel(modelPath: String, promise: Promise) {
         try {
+            val modelFile = File(modelPath)
+            if (!modelFile.exists()) {
+                promise.reject("ERR_FILE_NOT_FOUND", "Model file not found at: $modelPath")
+                return
+            }
+
             val options = LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
                 .setMaxTokens(512)
