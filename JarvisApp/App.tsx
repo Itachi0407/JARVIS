@@ -30,18 +30,37 @@ const App = () => {
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
         ]);
-        console.log('Permissions status:', granted);
+        console.log('Permissions request results:', granted); // Added for detailed logging
+
+        const micGranted = granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED;
+        const readStorageGranted = granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
+        const writeStorageGranted = granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
+
+        if (!micGranted || !readStorageGranted || !writeStorageGranted) {
+          let errorMessage = 'Error: ';
+          if (!micGranted) errorMessage += 'Microphone ';
+          if (!readStorageGranted || !writeStorageGranted) errorMessage += 'Storage ';
+          errorMessage += 'permissions are required.';
+          setResponse(errorMessage);
+          console.warn('Permissions denied:', { micGranted, readStorageGranted, writeStorageGranted });
+          return;
+        }
+        console.log('Permissions secured, sir.');
       }
 
       try {
+        console.log('Initializing LLM engine...');
         // Initialize J.A.R.V.I.S.
         await JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
-        // Initialize Whisper STT
+
+        console.log('Initializing Whisper STT engine...');
+        // Initialize Whisper STT (Ensure whisper-base.bin exists at this path)
         await VoiceService.init('/sdcard/Download/whisper-base.bin');
+
         console.log('Systems online, sir.');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Initialization failed:', error);
-        setResponse('Error: Failed to load local engines. Check model paths.');
+        setResponse(`Error: Failed to load engines. ${error.message || 'Check if model files exist in /sdcard/Download/'}`);
       }
     };
     init();
@@ -64,9 +83,9 @@ const App = () => {
           setTranscript('No speech detected.');
         }
       } catch (error) {
-        console.error(error);
+        console.error('STT Execution Error:', error);
         setIsListening(false);
-        setTranscript('STT Error occurred.');
+        setTranscript(`STT Error: ${error instanceof Error ? error.message : 'Recognition failed'}`);
       }
     }
   };

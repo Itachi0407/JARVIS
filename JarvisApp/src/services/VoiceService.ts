@@ -1,61 +1,39 @@
-// Lazy-load whisper to prevent crash if native module isn't available
-let initWhisper: any = null;
-try {
-  initWhisper = require('react-native-whisper').initWhisper;
-} catch (e) {
-  console.warn('react-native-whisper not available, STT disabled');
-}
+import JarvisModule from '../bridge/NativeJarvisModule';
 
 export class VoiceService {
-  private static whisperContext: any = null;
+  private static isInitialized: boolean = false;
 
   static async init(modelPath: string) {
-    if (this.whisperContext) return;
-    if (!initWhisper) {
-      console.warn('Whisper not available');
-      return;
-    }
-    try {
-      this.whisperContext = await initWhisper({
-        filePath: modelPath,
-      });
-      console.log('Whisper initialized');
-    } catch (error) {
-      console.error('STT Initialization failed:', error);
-    }
+    // Model path is not needed for native SpeechRecognizer, but we accept it for compatibility
+    this.isInitialized = true;
+    console.log('J.A.R.V.I.S. SpeechRecognizer Native Bridge ready.');
   }
 
-  private static currentStop: (() => void) | null = null;
-
   static async startListening(): Promise<string> {
-    if (!this.whisperContext) throw new Error('STT not initialized');
-    
-    const options = {
-      realtime: false, // Changed to false for simpler one-shot transcription
-      language: 'en',
-    };
-    
-    const { stop, promise } = this.whisperContext.transcribe(options);
-    this.currentStop = stop;
+    if (!JarvisModule) {
+      throw new Error('JarvisModule Native Bridge is not available.');
+    }
 
     try {
-      const result = await promise;
-      return result.text;
-    } finally {
-      this.currentStop = null;
+      console.log('Starting native speech recognition...');
+      const transcript = await JarvisModule.startSpeechRecognition();
+      console.log('Transcription result:', transcript);
+      return transcript;
+    } catch (error) {
+      console.error('Speech recognition failed:', error);
+      throw error;
     }
   }
 
   static stopListening() {
-    if (this.currentStop) {
-      this.currentStop();
-      this.currentStop = null;
+    if (JarvisModule) {
+      console.log('Stopping native speech recognition...');
+      JarvisModule.stopSpeechRecognition();
     }
   }
 
   static async speak(text: string) {
     console.log('J.A.R.V.I.S. speaking:', text);
-    // Here we would run the ONNX model for Piper TTS
-    // For now, we'll log it. Full native implementation requires specific model files.
+    // Future expansion: Integrate Android Text-To-Speech if requested
   }
 }
