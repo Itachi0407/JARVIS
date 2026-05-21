@@ -16,27 +16,41 @@ export class VoiceService {
       return;
     }
     try {
-      this.whisperContext = await initWhisper(modelPath);
+      this.whisperContext = await initWhisper({
+        filePath: modelPath,
+      });
       console.log('Whisper initialized');
     } catch (error) {
       console.error('STT Initialization failed:', error);
     }
   }
 
+  private static currentStop: (() => void) | null = null;
+
   static async startListening(): Promise<string> {
     if (!this.whisperContext) throw new Error('STT not initialized');
     
     const options = {
-      realtime: true,
+      realtime: false, // Changed to false for simpler one-shot transcription
       language: 'en',
     };
     
     const { stop, promise } = this.whisperContext.transcribe(options);
-    
-    // In a real app, we'd handle the stop signal. 
-    // For this boilerplate, we return the transcription promise.
-    const result = await promise;
-    return result.text;
+    this.currentStop = stop;
+
+    try {
+      const result = await promise;
+      return result.text;
+    } finally {
+      this.currentStop = null;
+    }
+  }
+
+  static stopListening() {
+    if (this.currentStop) {
+      this.currentStop();
+      this.currentStop = null;
+    }
   }
 
   static async speak(text: string) {

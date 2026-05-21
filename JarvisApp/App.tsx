@@ -7,6 +7,8 @@ import {
   StatusBar,
   TouchableOpacity,
   ScrollView,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import {JarvisOrb} from './src/components/JarvisOrb';
 import {JarvisService} from './src/services/JarvisService';
@@ -20,28 +22,43 @@ const App = () => {
   const [history, setHistory] = useState<{role: string; text: string}[]>([]);
 
   useEffect(() => {
-    // Initialize J.A.R.V.I.S.
-    JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
+    const init = async () => {
+      if (Platform.OS === 'android') {
+        await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        ]);
+      }
+
+      // Initialize J.A.R.V.I.S.
+      await JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
+      // Initialize Whisper STT
+      await VoiceService.init('/sdcard/Download/whisper-base.bin');
+    };
+    init();
   }, []);
 
   const handlePress = async () => {
     if (isListening) {
+      VoiceService.stopListening();
       setIsListening(false);
     } else {
       setIsListening(true);
       setTranscript('Listening...');
       
       try {
-        // In a real scenario, this would wait for voice end
-        // For simulation, we wait 2 seconds then process a dummy command
-        setTimeout(async () => {
-          setIsListening(false);
-          const dummyCommand = "Jarvis, turn on the flashlight.";
-          await processCommand(dummyCommand);
-        }, 2000);
+        const text = await VoiceService.startListening();
+        setIsListening(false);
+        if (text && text.trim().length > 0) {
+          await processCommand(text);
+        } else {
+          setTranscript('No speech detected.');
+        }
       } catch (error) {
         console.error(error);
         setIsListening(false);
+        setTranscript('STT Error occurred.');
       }
     }
   };
