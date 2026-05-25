@@ -1,39 +1,54 @@
-import JarvisModule from '../bridge/NativeJarvisModule';
+import { initWhisper, WhisperContext } from 'react-native-whisper';
 
 export class VoiceService {
   private static isInitialized: boolean = false;
+  private static whisperContext: WhisperContext | null = null;
+  private static stopTranscript: (() => void) | null = null;
 
   static async init(modelPath: string) {
-    // Model path is not needed for native SpeechRecognizer, but we accept it for compatibility
-    this.isInitialized = true;
-    console.log('J.A.R.V.I.S. SpeechRecognizer Native Bridge ready.');
+    try {
+      console.log('Initializing Whisper with model:', modelPath);
+      // We use the absolute internal path we set up
+      this.whisperContext = await initWhisper({ filePath: modelPath });
+      this.isInitialized = true;
+      console.log('J.A.R.V.I.S. Whisper STT ready.');
+    } catch (error) {
+      console.error('Failed to initialize Whisper:', error);
+      this.isInitialized = false;
+    }
   }
 
   static async startListening(): Promise<string> {
-    if (!JarvisModule) {
-      throw new Error('JarvisModule Native Bridge is not available.');
+    if (!this.whisperContext) {
+      throw new Error('Whisper STT is not initialized.');
     }
 
     try {
-      console.log('Starting native speech recognition...');
-      const transcript = await JarvisModule.startSpeechRecognition();
-      console.log('Transcription result:', transcript);
-      return transcript;
+      console.log('Starting Whisper transcription...');
+      const { stop, promise } = await this.whisperContext.transcribeRealtime({
+        language: 'en',
+        maxTokenCount: 512,
+      });
+
+      this.stopTranscript = stop;
+      const result = await promise;
+      console.log('Whisper result:', result.result);
+      return result.result;
     } catch (error) {
-      console.error('Speech recognition failed:', error);
+      console.error('Whisper transcription failed:', error);
       throw error;
     }
   }
 
   static stopListening() {
-    if (JarvisModule) {
-      console.log('Stopping native speech recognition...');
-      JarvisModule.stopSpeechRecognition();
+    if (this.stopTranscript) {
+      console.log('Stopping Whisper transcription...');
+      this.stopTranscript();
+      this.stopTranscript = null;
     }
   }
 
   static async speak(text: string) {
     console.log('J.A.R.V.I.S. speaking:', text);
-    // Future expansion: Integrate Android Text-To-Speech if requested
   }
 }

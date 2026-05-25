@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, TurboModuleRegistry } from 'react-native';
 
 interface JarvisModuleSpec {
   generateResponse(prompt: string): Promise<string>;
@@ -7,6 +7,10 @@ interface JarvisModuleSpec {
   stopSpeechRecognition(): void;
 }
 
-const JarvisModule: JarvisModuleSpec | null = NativeModules.JarvisModule || null;
+// Try both legacy and turbo module paths
+const JarvisModule: JarvisModuleSpec | null =
+  NativeModules.JarvisModule ||
+  TurboModuleRegistry.get<JarvisModuleSpec>('JarvisModule') ||
+  null;
 
 export default JarvisModule;

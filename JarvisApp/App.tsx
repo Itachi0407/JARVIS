@@ -25,24 +25,22 @@ const App = () => {
     const init = async () => {
       console.log('Starting J.A.R.V.I.S. initialization...');
       if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-        ]);
-        console.log('Permissions request results:', granted); // Added for detailed logging
+        const permissions = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+
+        // Only request legacy storage permissions on older Android versions
+        if (Platform.Version < 33) {
+          permissions.push(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
+          permissions.push(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
+        }
+
+        const granted = await PermissionsAndroid.requestMultiple(permissions);
+        console.log('Permissions request results:', granted);
 
         const micGranted = granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED;
-        const readStorageGranted = granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-        const writeStorageGranted = granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
 
-        if (!micGranted || !readStorageGranted || !writeStorageGranted) {
-          let errorMessage = 'Error: ';
-          if (!micGranted) errorMessage += 'Microphone ';
-          if (!readStorageGranted || !writeStorageGranted) errorMessage += 'Storage ';
-          errorMessage += 'permissions are required.';
-          setResponse(errorMessage);
-          console.warn('Permissions denied:', { micGranted, readStorageGranted, writeStorageGranted });
+        if (!micGranted) {
+          setResponse('Error: Microphone permission is required.');
+          console.warn('Microphone permission denied');
           return;
         }
         console.log('Permissions secured, sir.');
@@ -51,11 +49,11 @@ const App = () => {
       try {
         console.log('Initializing LLM engine...');
         // Initialize J.A.R.V.I.S.
-        await JarvisService.initialize('/sdcard/Download/gemma-2b-it-gpu-int4.bin');
+        await JarvisService.initialize('/data/user/0/com.jarvis/files/gemma-2b-it-gpu-int4.bin');
 
         console.log('Initializing Whisper STT engine...');
-        // Initialize Whisper STT (Ensure whisper-base.bin exists at this path)
-        await VoiceService.init('/sdcard/Download/whisper-base.bin');
+        // Initialize Whisper STT
+        await VoiceService.init('/data/user/0/com.jarvis/files/whisper-base.bin');
 
         console.log('Systems online, sir.');
       } catch (error: any) {
