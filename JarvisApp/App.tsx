@@ -27,12 +27,6 @@ const App = () => {
       if (Platform.OS === 'android') {
         const permissions = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
 
-        // Only request legacy storage permissions on older Android versions
-        if (Platform.Version < 33) {
-          permissions.push(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
-          permissions.push(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
-        }
-
         const granted = await PermissionsAndroid.requestMultiple(permissions);
         console.log('Permissions request results:', granted);
 
@@ -40,25 +34,19 @@ const App = () => {
 
         if (!micGranted) {
           setResponse('Error: Microphone permission is required.');
-          console.warn('Microphone permission denied');
           return;
         }
         console.log('Permissions secured, sir.');
       }
 
       try {
-        console.log('Initializing LLM engine...');
-        // Initialize J.A.R.V.I.S.
-        await JarvisService.initialize('/data/user/0/com.jarvis/files/gemma-2b-it-gpu-int4.bin');
-
-        console.log('Initializing Whisper STT engine...');
-        // Initialize Whisper STT
-        await VoiceService.init('/data/user/0/com.jarvis/files/whisper-base.bin');
-
+        console.log('Initializing systems...');
+        await JarvisService.initialize(''); // Bypass for now
+        await VoiceService.init('');
         console.log('Systems online, sir.');
       } catch (error: any) {
         console.error('Initialization failed:', error);
-        setResponse(`Error: Failed to load engines. ${error.message || 'Check if model files exist in /sdcard/Download/'}`);
+        setResponse(`Error: ${error.message}`);
       }
     };
     init();
@@ -96,14 +84,7 @@ const App = () => {
       const result = await JarvisService.ask(command);
       setResponse(result.text);
       setHistory(prev => [...prev, { role: 'user', text: command }, { role: 'jarvis', text: result.text }]);
-
-      // Speak the response
       await VoiceService.speak(result.text);
-
-      if (result.action) {
-        console.log('Executing action:', result.action);
-        // Handle device control here
-      }
     } catch (error) {
       setResponse("I'm sorry sir, I've encountered an error in my logic circuits.");
     } finally {
@@ -116,7 +97,7 @@ const App = () => {
       <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <Text style={styles.title}>J.A.R.V.I.S.</Text>
-        <Text style={styles.subtitle}>MARK I • LOCAL ENGINE</Text>
+        <Text style={styles.subtitle}>MARK I • FRESH START</Text>
       </View>
 
       <View style={styles.orbContainer}>
