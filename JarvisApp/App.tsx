@@ -25,23 +25,30 @@ const App = () => {
     const init = async () => {
       console.log('Starting J.A.R.V.I.S. initialization...');
       if (Platform.OS === 'android') {
-        const permissions = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+        const permissions = [
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+        ];
 
         const granted = await PermissionsAndroid.requestMultiple(permissions);
         console.log('Permissions request results:', granted);
 
         const micGranted = granted['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED;
+        const storageGranted = granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
 
         if (!micGranted) {
           setResponse('Error: Microphone permission is required.');
           return;
+        }
+        if (!storageGranted) {
+          console.warn('Storage permission denied, model loading might fail.');
         }
         console.log('Permissions secured, sir.');
       }
 
       try {
         console.log('Initializing systems...');
-        await JarvisService.initialize(''); // Bypass for now
+        await JarvisService.initialize('/sdcard/Android/data/com.jarvis/files/gemma-2b-it-gpu-int4.bin');
         await VoiceService.init('');
         console.log('Systems online, sir.');
       } catch (error: any) {

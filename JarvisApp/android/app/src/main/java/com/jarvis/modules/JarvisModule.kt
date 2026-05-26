@@ -11,11 +11,15 @@ import android.speech.RecognizerIntent
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import java.io.File
+import kotlin.concurrent.thread
 
 class JarvisModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var speechPromise: Promise? = null
+    private var llmInference: LlmInference? = null
 
     override fun getName(): String {
         return "JarvisModule"
@@ -23,13 +27,43 @@ class JarvisModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
 
     @ReactMethod
     fun initializeModel(modelPath: String, promise: Promise) {
-        // LLM initialization removed for fresh start/diagnostic
-        promise.resolve(true)
+        thread {
+            try {
+                val file = File(modelPath)
+                if (!file.exists()) {
+                    promise.reject("ERR_MODEL", "Model file not found at path: $modelPath")
+                    return@thread
+                }
+
+                val options = LlmInference.LlmInferenceOptions.builder()
+                    .setModelPath(modelPath)
+                    .setMaxTokens(1024)
+                    .build()
+                
+                llmInference = LlmInference.createFromOptions(reactApplicationContext, options)
+                promise.resolve(true)
+            } catch (e: Exception) {
+                Log.e("JarvisModule", "Error initializing model: ${e.message}")
+                promise.reject("ERR_MODEL_INIT", e.message)
+            }
+        }
     }
 
     @ReactMethod
     fun generateResponse(prompt: String, promise: Promise) {
-        promise.resolve("Diagnostic mode: System is functional.")
+        if (llmInference == null) {
+            promise.reject("ERR_MODEL_NOT_READY", "LLM Inference is not initialized")
+            return
+        }
+        thread {
+            try {
+                val response = llmInference?.generateResponse(prompt) ?: "Error: Inference failed"
+                promise.resolve(response)
+            } catch (e: Exception) {
+                Log.e("JarvisModule", "Error generating response: ${e.message}")
+                promise.reject("ERR_INFERENCE", e.message)
+            }
+        }
     }
 
     @ReactMethod
